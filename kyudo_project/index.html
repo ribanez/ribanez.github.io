@@ -12,8 +12,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-        html, body {
-            min-height: 100vh;
+        html {
             width: 100%;
         }
         body {
@@ -21,6 +20,9 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: clamp(10px, 3vw, 20px);
             color: #333;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
         .container {
             width: 100%;
