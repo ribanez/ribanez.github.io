@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Calculadora de Trayectoria de Flechas</title>
+    <!-- 1. Cargar la librería principal de Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 2. Cargar el plugin de anotaciones para la línea de objetivo -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        /* Estilos generales y de reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        /* Contenedor principal de la aplicación */
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: clamp(15px, 5vw, 30px); /* Padding adaptable */
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: clamp(1.5em, 5vw, 2.2em); /* Tamaño de fuente adaptable */
+            color: #1e3a8a;
+        }
+        /* Grid para los controles deslizantes */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .control-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        /* Estilos para los sliders (range inputs) */
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+            background: #e5e7eb;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.1s ease-in-out;
+        }
+        input[type="range"]:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+        }
+        /* Visualización del valor del slider */
+        .value-display {
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-top: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+        .fuerza { color: #2563eb; }
+        .inclinacion { color: #059669; }
+        .altura { color: #7c3aed; }
+        /* Sección de resultados */
+        .result {
+            background: #eff6ff;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+            border: 1px solid #bfdbfe;
+        }
+        .result-label {
+            font-size: 1.1em;
+            color: #555;
+            font-weight: 600;
+        }
+        .result-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: color 0.3s ease;
+        }
+        /* Contenedor del gráfico */
+        .chart-container {
+            position: relative;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 300px; /* Altura mínima para el gráfico */
+        }
+        .info {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Calculadora de Trayectoria de Flechas</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="fuerza">Fuerza del Arco (kg)</label>
+                <input type="range" id="fuerza" min="8" max="22" step="0.5" value="10">
+                <div class="value-display fuerza" id="fuerzaValue">10.0 kg</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="inclinacion">Inclinación de Punta (mm)</label>
+                <input type="range" id="inclinacion" min="-10" max="10" step="0.5" value="0">
+                <div class="value-display inclinacion" id="inclinacionValue">0.0 mm</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="alturaInicial">Altura Inicial (m)</label>
+                <input type="range" id="alturaInicial" min="0.5" max="2.5" step="0.1" value="1.5">
+                <div class="value-display altura" id="alturaInicialValue">1.5 m</div>
+            </div>
+        </div>
+        
+        <div class="result">
+            <div class="result-label">Altura a 28m:</div>
+            <div class="result-value" id="alturaObjetivo">Calculando...</div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="chart"></canvas>
+        </div>
+        
+        <div class="info">
+            Distancia objetivo: 28m | Masa flecha: 30g
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('chart').getContext('2d');
+        const distanciaObjetivo = 28;
+
+        // Inicializa el gráfico de Chart.js
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Trayectoria',
+                    data: [],
+                    borderColor: '#2563eb',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0.1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // Permite que el gráfico llene el contenedor
+                scales: {
+                    x: {
+                        type: 'linear',
+                        min: 0,
+                        max: 30,
+                        title: { display: true, text: 'Distancia (m)' },
+                        grid: { color: '#f1f5f9' }
+                    },
+                    y: {
+                        min: 0,
+                        title: { display: true, text: 'Altura (m)' },
+                        grid: { color: '#f1f5f9' }
+                    }
+                },
+                plugins: {
+                    // Configuración del plugin de anotaciones (funciona gracias al script extra)
+                    annotation: {
+                        annotations: {
+                            targetLine: {
+                                type: 'line',
+                                xMin: distanciaObjetivo,
+                                xMax: distanciaObjetivo,
+                                borderColor: 'red',
+                                borderWidth: 2,
+                                borderDash: [6, 6],
+                                label: {
+                                    content: 'Objetivo',
+                                    display: true,
+                                    position: 'start',
+                                    backgroundColor: 'rgba(255, 0, 0, 0.7)'
+                                }
+                            }
+                        }
+                    },
+                    tooltip: { mode: 'index', intersect: false },
+                    legend: { display: false }
+                }
+            }
+        });
+
+        /**
+         * Simula la trayectoria de una flecha bajo la gravedad.
+         * @param {number} h0 - Altura inicial en metros.
+         * @param {number} anguloGrados - Ángulo de lanzamiento en grados.
+         * @param {number} fuerzaKg - Fuerza del arco en kilogramos.
+         * @returns {{trayectoria: {x: number, y: number}[], alturaEnObjetivo: number|null}}
+         */
+        function simularFlecha(h0, anguloGrados, fuerzaKg) {
+            const anguloRadianes = (anguloGrados * Math.PI) / 180;
+            
+            // [FÍSICA CORRECTA] Modelo implementado desde el script de Python.
+            const masa = 0.030; // 30 gramos en kg
+            const factorRendimiento = 0.9;
+            const tiempoAceleracion = 0.02; // 20ms típico para un arco
+            const aceleracion = (factorRendimiento * fuerzaKg * 9.81) / masa;
+            const v0 = aceleracion * tiempoAceleracion;
+            
+            let vx = v0 * Math.cos(anguloRadianes);
+            let vy = v0 * Math.sin(anguloRadianes);
+            
+            const g = 9.81; // Aceleración de la gravedad
+            const dt = 0.001; // Intervalo de tiempo para la simulación
+            let x = 0, y = h0;
+            
+            const trayectoria = [];
+            let alturaEnObjetivo = null;
+            
+            while (y >= 0 && x <= distanciaObjetivo + 10) {
+                trayectoria.push({x: x, y: y});
+                
+                // Actualizar posición y velocidad usando el método de Euler
+                x += vx * dt;
+                y += vy * dt;
+                vy -= g * dt;
+
+                // Interpolar para encontrar la altura exacta en la línea de objetivo
+                if (alturaEnObjetivo === null && x >= distanciaObjetivo) {
+                    const p_prev = trayectoria[trayectoria.length - 1];
+                    const p_curr = {x: x, y: y};
+                    const ratio = (distanciaObjetivo - p_prev.x) / (p_curr.x - p_prev.x);
+                    alturaEnObjetivo = p_prev.y + ratio * (p_curr.y - p_prev.y);
+                }
+            }
+            
+            return { trayectoria, alturaEnObjetivo };
+        }
+
+        /**
+         * Función principal que lee los valores, ejecuta la simulación y actualiza la UI.
+         */
+        function actualizar() {
+            // Leer valores de los sliders
+            const fuerza = parseFloat(document.getElementById('fuerza').value);
+            const inclinacionMm = parseFloat(document.getElementById('inclinacion').value);
+            const alturaInicial = parseFloat(document.getElementById('alturaInicial').value);
+            
+            // Actualizar las etiquetas de valor
+            document.getElementById('fuerzaValue').textContent = fuerza.toFixed(1) + ' kg';
+            document.getElementById('inclinacionValue').textContent = inclinacionMm.toFixed(1) + ' mm';
+            document.getElementById('alturaInicialValue').textContent = alturaInicial.toFixed(1) + ' m';
+            
+            // Calcular el ángulo basado en la inclinación de la punta de la flecha
+            const longitudParaAngulo = 0.762; // 30 pulgadas en metros
+            const anguloGrados = Math.atan((inclinacionMm / 1000) / longitudParaAngulo) * (180 / Math.PI);
+            
+            const resultado = simularFlecha(alturaInicial, anguloGrados, fuerza);
+            
+            // Reducir la cantidad de puntos para mejorar el rendimiento del gráfico
+            const datosParaGrafico = resultado.trayectoria.filter((_, i) => i % 20 === 0);
+            
+            // Encontrar la altura máxima para ajustar la escala del gráfico dinámicamente
+            const alturaMaxima = Math.max(...resultado.trayectoria.map(p => p.y));
+
+            // Actualizar datos y opciones del gráfico
+            chart.data.datasets[0].data = datosParaGrafico;
+            chart.options.scales.y.max = Math.max(3, Math.ceil(alturaMaxima * 1.1));
+            chart.update();
+            
+            // Mostrar el resultado final
+            const alturaFinal = resultado.alturaEnObjetivo;
+            const outputElement = document.getElementById('alturaObjetivo');
+            if (alturaFinal !== null && alturaFinal > 0) {
+                // Convertir metros a centímetros para mostrar
+                const alturaEnCm = alturaFinal * 100;
+                outputElement.textContent = alturaEnCm.toFixed(1) + ' cm';
+                outputElement.style.color = '#2563eb';
+            } else {
+                outputElement.textContent = 'No alcanza';
+                outputElement.style.color = '#dc2626';
+            }
+        }
+
+        // Añadir listeners para actualizar en tiempo real cuando se mueven los sliders
+        document.getElementById('fuerza').addEventListener('input', actualizar);
+        document.getElementById('inclinacion').addEventListener('input', actualizar);
+        document.getElementById('alturaInicial').addEventListener('input', actualizar);
+        
+        // Ejecutar la función una vez al cargar la página para mostrar el estado inicial
+        window.addEventListener('load', actualizar);
+    </script>
+</body>
+</html>
+
+
